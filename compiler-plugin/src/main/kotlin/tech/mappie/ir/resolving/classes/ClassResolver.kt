@@ -23,6 +23,7 @@ import tech.mappie.ir.util.location
 class ClassResolver(
     private val sources: List<Pair<Name, IrType>>,
     private val target: IrType,
+    private val fallbackSources: List<Pair<Name, IrType>> = emptyList(),
 ) : MappingResolver {
 
     context(context: MappieContext)
@@ -32,6 +33,7 @@ class ClassResolver(
             ClassMappingRequestBuilder(constructor)
                 .targets(MappieTargetsCollector(target, function, constructor).collect())
                 .sources(sources)
+                .fallbackSources(fallbackSources)
                 .apply {
                     mapping?.arguments?.firstIsInstanceOrNull<IrFunctionExpression>()?.function?.body?.statements?.forEach { statement ->
                         statement.accept(ClassMappingStatementCollector(origin), context)

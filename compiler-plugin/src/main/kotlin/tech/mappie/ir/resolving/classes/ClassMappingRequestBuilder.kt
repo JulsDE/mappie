@@ -37,6 +37,8 @@ class ClassMappingRequestBuilder(private val constructor: IrConstructor) {
 
     private val implicit = mutableMapOf<Name, List<ImplicitClassMappingSource>>()
 
+    private val fallbackImplicit = mutableMapOf<Name, List<ImplicitClassMappingSource>>()
+
     private val explicit = mutableMapOf<Name, List<ExplicitClassMappingSource>>()
 
     context(context: MappieContext)
@@ -44,17 +46,18 @@ class ClassMappingRequestBuilder(private val constructor: IrConstructor) {
         val useDefaultArguments = useDefaultArguments(origin.referenceMapFunction())
         val namingConvention = namingConvention(origin.referenceMapFunction())
 
-        val normalizedImplicit = if (namingConvention == NamingConventionMode.LENIENT) buildNormalizedLookup() else null
+        val normalizedImplicit = if (namingConvention == NamingConventionMode.LENIENT) implicit.buildNormalizedLookup() else null
+        val normalizedFallbackImplicit = if (namingConvention == NamingConventionMode.LENIENT) fallbackImplicit.buildNormalizedLookup() else null
 
         val mappings = targets.associateWith { target ->
-            explicit(origin, target) ?: implicit(origin, target, useDefaultArguments, normalizedImplicit)
+            explicit(origin, target) ?: implicit(origin, target, useDefaultArguments, normalizedImplicit, normalizedFallbackImplicit)
         }
 
         return ClassMappingRequest(origin, sources.map { it.value }, constructor, TargetSourcesClassMappings(mappings))
     }
 
-    private fun buildNormalizedLookup(): Map<String, List<ImplicitClassMappingSource>> =
-        implicit.flatMap { (name, sources) ->
+    private fun Map<Name, List<ImplicitClassMappingSource>>.buildNormalizedLookup(): Map<String, List<ImplicitClassMappingSource>> =
+        flatMap { (name, sources) ->
             sources.map { source -> name.normalize() to source }
         }.groupBy({ it.first }, { it.second })
 
@@ -75,23 +78,45 @@ class ClassMappingRequestBuilder(private val constructor: IrConstructor) {
         origin: InternalMappieDefinition,
         target: ClassMappingTarget,
         useDefaultArguments: Boolean,
-        normalizedImplicit: Map<String, List<ImplicitClassMappingSource>>?
+        normalizedImplicit: Map<String, List<ImplicitClassMappingSource>>?,
+        normalizedFallbackImplicit: Map<String, List<ImplicitClassMappingSource>>?,
     ): List<ImplicitClassMappingSource> {
-        // First try exact match
-        val exactMatch = implicit.getOrDefault(target.name, emptyList())
+        val sources = sources(implicit, target, normalizedImplicit)
+        val fallbackSources = sources(fallbackImplicit, target, normalizedFallbackImplicit)
 
-        // If exact match found or case-insensitive matching disabled, use exact match
-        val sources = if (exactMatch.isNotEmpty() || normalizedImplicit == null) {
+        return resolvedSources(origin, target, sources)
+            .ifEmpty {
+                resolvedSources(origin, target, fallbackSources)
+            }
+            .ifEmpty {
+                if (target is ValueParameterTarget && target.value.hasDefaultValue() && useDefaultArguments) {
+                    listOf(ParameterDefaultValueMappingSource(target.value))
+                } else {
+                    emptyList()
+                }
+            }
+    }
+
+    private fun sources(
+        implicit: Map<Name, List<ImplicitClassMappingSource>>,
+        target: ClassMappingTarget,
+        normalizedImplicit: Map<String, List<ImplicitClassMappingSource>>?,
+    ): List<ImplicitClassMappingSource> {
+        val exactMatch = implicit.getOrDefault(target.name, emptyList())
+        return if (exactMatch.isNotEmpty() || normalizedImplicit == null) {
             exactMatch
         } else {
-            // Try case-insensitive matching
-            val normalizedTarget = target.name.normalize()
-            normalizedImplicit.getOrDefault(normalizedTarget, emptyList())
+            normalizedImplicit.getOrDefault(target.name.normalize(), emptyList())
         }
+    }
 
-        // Try exact subtype
-        return sources.filter { it.type.isSubtypeOf(target.type) }
-            // Try current sources with transformation
+    context(context: MappieContext)
+    private fun resolvedSources(
+        origin: InternalMappieDefinition,
+        target: ClassMappingTarget,
+        sources: List<ImplicitClassMappingSource>,
+    ): List<ImplicitClassMappingSource> =
+        sources.filter { it.type.isSubtypeOf(target.type) }
             .ifEmpty {
                 sources.map { source ->
                     when (source) {
@@ -102,15 +127,6 @@ class ClassMappingRequestBuilder(private val constructor: IrConstructor) {
                     }
                 }
             }
-            // Try default arguments, if there are no sources
-            .ifEmpty {
-                if (target is ValueParameterTarget && target.value.hasDefaultValue() && useDefaultArguments) {
-                    listOf(ParameterDefaultValueMappingSource(target.value))
-                } else {
-                    emptyList()
-                }
-            }
-    }
 
     context(context: MappieContext)
     private fun transformation(origin: InternalMappieDefinition, source: ClassMappingSource, target: ClassMappingTarget): PropertyMappingTransformation? {
@@ -159,6 +175,21 @@ class ClassMappingRequestBuilder(private val constructor: IrConstructor) {
             implicit.merge(name, listOf(ParameterValueMappingSource(name, type, null)), List<ImplicitClassMappingSource>::plus)
             type.upperBound.getClass()!!.accept(ImplicitClassMappingSourcesCollector(context), name to type).forEach { (name, source) ->
                 implicit.merge(name, listOf(source), List<ImplicitClassMappingSource>::plus)
+            }
+        }
+    }
+
+    context(context: MappieContext)
+    fun fallbackSources(parameters: List<Pair<Name, IrType>>) = apply {
+        parameters.forEach { (name, type) ->
+            type.upperBound.getClass()!!.accept(ImplicitClassMappingSourcesCollector(context), name to type).forEach { (sourceName, source) ->
+                val fallback = when (source) {
+                    is ImplicitPropertyMappingSource -> source.copy(isFallback = true)
+                    is FunctionMappingSource -> source.copy(isFallback = true)
+                    is ParameterValueMappingSource -> source.copy(isFallback = true)
+                    is ParameterDefaultValueMappingSource -> source
+                }
+                fallbackImplicit.merge(sourceName, listOf(fallback), List<ImplicitClassMappingSource>::plus)
             }
         }
     }

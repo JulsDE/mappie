@@ -6,7 +6,11 @@ import org.jetbrains.kotlin.name.Name
 
 val IDENTIFIER_MAPPING = Name.identifier("mapping")
 
+val IDENTIFIER_UPDATING = Name.identifier("updating")
+
 val IDENTIFIER_MAP = Name.identifier("map")
+
+val IDENTIFIER_UPDATE_FROM = Name.identifier("updateFrom")
 
 val IDENTIFIER_MAP_NULLABLE = Name.identifier("mapNullable")
 
@@ -67,6 +71,8 @@ val CLASS_ID_OBJECT_MAPPIE3 = ClassId(PACKAGE_TECH_MAPPIE_API, Name.identifier("
 val CLASS_ID_OBJECT_MAPPIE4 = ClassId(PACKAGE_TECH_MAPPIE_API, Name.identifier("ObjectMappie4"))
 
 val CLASS_ID_OBJECT_MAPPIE5 = ClassId(PACKAGE_TECH_MAPPIE_API, Name.identifier("ObjectMappie5"))
+
+val CLASS_ID_OBJECT_UPDATE_MAPPIE = ClassId(PACKAGE_TECH_MAPPIE_API, Name.identifier("ObjectUpdateMappie"))
 
 val CLASS_ID_USE_DEFAULT_ARGUMENTS = ClassId(PACKAGE_TECH_MAPPIE_API_CONFIG, Name.identifier("UseDefaultArguments"))
 

@@ -31,6 +31,7 @@ fun allMappieClasses(): Set<IrClassSymbol> = setOf(
     referenceObjectMappieClass3(),
     referenceObjectMappieClass4(),
     referenceObjectMappieClass5(),
+    referenceObjectUpdateMappieClass(),
 )
 
 context(context: MappieContext)
@@ -56,6 +57,10 @@ fun referenceObjectMappieClass4(): IrClassSymbol =
 context(context: MappieContext)
 fun referenceObjectMappieClass5(): IrClassSymbol =
     context.pluginContext.referenceClass(CLASS_ID_OBJECT_MAPPIE5)!!
+
+context(context: MappieContext)
+fun referenceObjectUpdateMappieClass(): IrClassSymbol =
+    context.pluginContext.referenceClass(CLASS_ID_OBJECT_UPDATE_MAPPIE)!!
 
 context(context: MappieContext)
 fun referenceEnumMappieClass(): IrClassSymbol =

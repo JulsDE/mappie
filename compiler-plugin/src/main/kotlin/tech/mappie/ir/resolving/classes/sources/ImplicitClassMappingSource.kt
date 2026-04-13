@@ -13,6 +13,7 @@ data class ParameterValueMappingSource(
     val parameter: Name,
     val parameterType: IrType,
     override val transformation: PropertyMappingTransformation?,
+    val isFallback: Boolean = false,
 ) : ImplicitClassMappingSource, TransformableClassMappingSource {
     override val source = parameterType
     override val type = type(parameterType)
@@ -34,6 +35,7 @@ data class ImplicitPropertyMappingSource(
     val parameter: Name,
     val parameterType: IrType,
     override val transformation: PropertyMappingTransformation?,
+    val isFallback: Boolean = false,
 ) : ImplicitClassMappingSource, TransformableClassMappingSource {
     override val source = propertyType
     override val type = type(propertyType)
@@ -47,6 +49,7 @@ data class FunctionMappingSource(
     val parameter: Name,
     val parameterType: IrType,
     override val transformation: PropertyMappingTransformation?,
+    val isFallback: Boolean = false,
 ) : ImplicitClassMappingSource, TransformableClassMappingSource {
     override val source = functionType
     override val type = type(functionType)

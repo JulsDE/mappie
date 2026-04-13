@@ -25,6 +25,7 @@ import tech.mappie.ir.resolving.classes.targets.FunctionCallTarget
 import tech.mappie.ir.resolving.classes.targets.SetterTarget
 import tech.mappie.ir.resolving.classes.targets.ValueParameterTarget
 import tech.mappie.ir.util.irLambda
+import tech.mappie.ir.util.isMappieUpdateFromFunction
 import tech.mappie.ir.referenceFunctionRun
 import tech.mappie.ir.resolving.TargetSourcesClassMappings
 
@@ -34,10 +35,21 @@ class ClassMappieCodeGenerator(
 
     context(context: MappieContext)
     override fun IrBlockBodyBuilder.content() {
+        val mapFunction = model.definition.referenceMapFunction()
         val constructor = model.constructor.symbol
-        val regularParameters = model.definition.referenceMapFunction().parameters.filter { it.kind == IrParameterKind.Regular }
-        val typeArguments = (model.definition.referenceMapFunction().returnType.type as IrSimpleType).arguments.map { it.typeOrNull ?: context.pluginContext.irBuiltIns.anyType }
+        val regularParameters = mapFunction.parameters.filter { it.kind == IrParameterKind.Regular }
+        val typeArguments = (mapFunction.returnType.type as IrSimpleType).arguments.map { it.typeOrNull ?: context.pluginContext.irBuiltIns.anyType }
         val mappings  = model.mappings as TargetSourcesClassMappings
+        val updateInPlace = mapFunction.isMappieUpdateFromFunction() && mappings
+            .filterKeys { it is ValueParameterTarget }
+            .all { (_, source) -> source.single().preservesUpdaterValue() }
+
+        if (updateInPlace) {
+            val updater = regularParameters.last()
+            applySetterMappings(mappings, regularParameters, irGet(updater), skipUpdaterFallbackMappings = true)
+            +irReturn(irGet(updater))
+            return
+        }
 
         val call = irCallConstructor(constructor, typeArguments).apply {
             mappings.forEach { (target, source) ->
@@ -51,18 +63,37 @@ class ClassMappieCodeGenerator(
 
         val variable = createTmpVariable(call)
 
+        applySetterMappings(mappings, regularParameters, irGet(variable), skipUpdaterFallbackMappings = false)
+
+        +irReturn(irGet(variable))
+    }
+
+    context(context: MappieContext)
+    private fun IrBlockBodyBuilder.applySetterMappings(
+        mappings: TargetSourcesClassMappings,
+        regularParameters: List<IrValueParameter>,
+        receiver: IrExpression,
+        skipUpdaterFallbackMappings: Boolean,
+    ) {
         mappings.forEach { (target, source) ->
+            val argumentSource = source.single()
+            if (skipUpdaterFallbackMappings && argumentSource.isAutomaticUpdaterFallback()) return@forEach
+
             when (target) {
                 is SetterTarget -> {
-                    +irCall(target.value.setter!!).apply {
-                        dispatchReceiver = irGet(variable)
-                        arguments[1] = constructArgument(source.single(), target, regularParameters)
+                    constructArgument(argumentSource, target, regularParameters)?.let { argument ->
+                        +irCall(target.value.setter!!).apply {
+                            dispatchReceiver = receiver
+                            arguments[1] = argument
+                        }
                     }
                 }
                 is FunctionCallTarget -> {
-                    +irCall(target.value).apply {
-                        dispatchReceiver = irGet(variable)
-                        arguments[1] = constructArgument(source.single(), target, regularParameters)
+                    constructArgument(argumentSource, target, regularParameters)?.let { argument ->
+                        +irCall(target.value).apply {
+                            dispatchReceiver = receiver
+                            arguments[1] = argument
+                        }
                     }
                 }
                 else -> {
@@ -70,8 +101,6 @@ class ClassMappieCodeGenerator(
                 }
             }
         }
-
-        +irReturn(irGet(variable))
     }
 
     context(context: MappieContext)
@@ -142,5 +171,22 @@ class ClassMappieCodeGenerator(
             is ParameterDefaultValueMappingSource -> {
                 null
             }
+        }
+
+    private fun ClassMappingSource.isAutomaticUpdaterFallback(): Boolean =
+        when (this) {
+            is ImplicitPropertyMappingSource -> isFallback
+            is FunctionMappingSource -> isFallback
+            is ParameterValueMappingSource -> isFallback
+            else -> false
+        }
+
+    private fun ClassMappingSource.preservesUpdaterValue(): Boolean =
+        when (this) {
+            is ParameterDefaultValueMappingSource -> true
+            is ImplicitPropertyMappingSource -> isFallback && transformation == null
+            is FunctionMappingSource -> isFallback && transformation == null
+            is ParameterValueMappingSource -> isFallback && transformation == null
+            else -> false
         }
 }

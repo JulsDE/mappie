@@ -33,6 +33,12 @@ fun IrClass.allSuperTypes(): List<IrType> =
 fun IrSimpleFunction.isMappieMapFunction() =
     name == IDENTIFIER_MAP && overriddenSymbols.isNotEmpty()
 
+fun IrSimpleFunction.isMappieUpdateFromFunction() =
+    name == IDENTIFIER_UPDATE_FROM && overriddenSymbols.isNotEmpty()
+
+fun IrSimpleFunction.isMappieMappingFunction() =
+    isMappieMapFunction() || isMappieUpdateFromFunction()
+
 fun IrSimpleFunction.isMappieMapNullableFunction() =
     name == IDENTIFIER_MAP_NULLABLE
             && parameters.singleOrNull { it.kind == IrParameterKind.Regular }?.type?.isNullable() == true

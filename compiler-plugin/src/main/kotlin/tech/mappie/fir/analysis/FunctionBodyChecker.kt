@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.fir.visitors.FirVisitor
 import tech.mappie.fir.analysis.MappieErrors.MULTIPLE_MAPPING_CALLS
 import tech.mappie.fir.util.isSubclassOfAnMappie
 import tech.mappie.util.IDENTIFIER_MAPPING
+import tech.mappie.util.IDENTIFIER_UPDATING
 
 class FunctionBodyChecker : FirFunctionChecker(MppCheckerKind.Common) {
 
@@ -33,7 +34,7 @@ private object MappingFinder : FirVisitor<Unit, MutableList<FirFunctionCall>>() 
         element.acceptChildren(this, data)
 
     override fun visitFunctionCall(functionCall: FirFunctionCall, data: MutableList<FirFunctionCall>) {
-        if (functionCall.calleeReference.name == IDENTIFIER_MAPPING) {
+        if (functionCall.calleeReference.name == IDENTIFIER_MAPPING || functionCall.calleeReference.name == IDENTIFIER_UPDATING) {
             data.add(functionCall)
         }
         functionCall.acceptChildren(this, data)

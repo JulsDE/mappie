@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.visitors.IrVisitor
 import tech.mappie.util.IDENTIFIER_MAPPING
+import tech.mappie.util.IDENTIFIER_UPDATING
 
 fun findMappingStatements(element: IrElement?): List<IrCall> {
     return if (element != null) {
@@ -22,7 +23,7 @@ private object MappingStatementsFinder : IrVisitor<Unit, MutableList<IrCall>>() 
 
     override fun visitCall(expression: IrCall, data: MutableList<IrCall>) {
         when (expression.symbol.owner.name) {
-            IDENTIFIER_MAPPING -> data.add(expression)
+            IDENTIFIER_MAPPING, IDENTIFIER_UPDATING -> data.add(expression)
             else -> expression.acceptChildren(this, data)
         }
     }

@@ -18,6 +18,7 @@ import tech.mappie.util.CLASS_ID_OBJECT_MAPPIE2
 import tech.mappie.util.CLASS_ID_OBJECT_MAPPIE3
 import tech.mappie.util.CLASS_ID_OBJECT_MAPPIE4
 import tech.mappie.util.CLASS_ID_OBJECT_MAPPIE5
+import tech.mappie.util.CLASS_ID_OBJECT_UPDATE_MAPPIE
 
 context(context: CheckerContext)
 internal fun FirClassSymbol<*>.isSubclassOfEnumMappie() =
@@ -44,8 +45,17 @@ internal fun FirClassSymbol<*>.isSubclassOfObjectMappie5() =
     isSubclassOf(CLASS_ID_OBJECT_MAPPIE5.toLookupTag(), context.session, false, false)
 
 context(context: CheckerContext)
+internal fun FirClassSymbol<*>.isSubclassOfObjectUpdateMappie() =
+    isSubclassOf(CLASS_ID_OBJECT_UPDATE_MAPPIE.toLookupTag(), context.session, false, false)
+
+context(context: CheckerContext)
 internal fun FirClassSymbol<*>.isSubclassOfAnObjectMappie() =
-    isSubclassOfObjectMappie() || isSubclassOfObjectMappie2() || isSubclassOfObjectMappie3() || isSubclassOfObjectMappie4() || isSubclassOfObjectMappie5()
+    isSubclassOfObjectMappie() ||
+            isSubclassOfObjectMappie2() ||
+            isSubclassOfObjectMappie3() ||
+            isSubclassOfObjectMappie4() ||
+            isSubclassOfObjectMappie5() ||
+            isSubclassOfObjectUpdateMappie()
 
 context(context: CheckerContext)
 internal fun FirClassSymbol<*>.isSubclassOfAnMappie() =

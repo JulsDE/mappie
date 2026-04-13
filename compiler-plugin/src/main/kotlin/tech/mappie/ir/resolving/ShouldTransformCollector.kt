@@ -9,7 +9,8 @@ import org.jetbrains.kotlin.ir.expressions.IrReturn
 import tech.mappie.ir.MappieContext
 import tech.mappie.ir.util.BaseVisitor
 import tech.mappie.util.IDENTIFIER_MAPPING
-import tech.mappie.ir.util.isMappieMapFunction
+import tech.mappie.util.IDENTIFIER_UPDATING
+import tech.mappie.ir.util.isMappieMappingFunction
 import tech.mappie.ir.shouldGenerateCode
 
 class ShouldTransformCollector(private val context: MappieContext) : BaseVisitor<Boolean, Unit>() {
@@ -20,7 +21,7 @@ class ShouldTransformCollector(private val context: MappieContext) : BaseVisitor
     }
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction, data: Unit): Boolean {
-        return declaration.body?.accept(data) ?: declaration.isMappieMapFunction()
+        return declaration.body?.accept(data) ?: declaration.isMappieMappingFunction()
     }
 
     override fun visitBlockBody(body: IrBlockBody, data: Unit): Boolean {
@@ -32,7 +33,7 @@ class ShouldTransformCollector(private val context: MappieContext) : BaseVisitor
     }
 
     override fun visitCall(expression: IrCall, data: Unit): Boolean {
-        return expression.symbol.owner.name in arrayOf(IDENTIFIER_MAPPING)
+        return expression.symbol.owner.name in arrayOf(IDENTIFIER_MAPPING, IDENTIFIER_UPDATING)
     }
 
     override fun visitElement(element: IrElement, data: Unit): Boolean {

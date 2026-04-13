@@ -6,6 +6,7 @@ import tech.mappie.api.ObjectMappie
 import tech.mappie.api.ObjectMappie2
 import tech.mappie.api.ObjectMappie3
 import tech.mappie.api.ObjectMappie5
+import tech.mappie.api.ObjectUpdateMappie
 import tech.mappie.testing.compilation.compile
 import tech.mappie.testing.compilation.CompilationDsl
 import java.io.File
@@ -44,6 +45,12 @@ abstract class MappieTestCase {
 
     protected fun <FROM1, FROM2, FROM3, FROM4, FROM5, TO> CompilationAssertionDsl.objectMappie5(name: String = "Mapper", vararg args: Any?): ObjectMappie5<FROM1, FROM2, FROM3, FROM4, FROM5, TO> =
         classLoader.loadObjectMappie5Class<FROM1, FROM2, FROM3, FROM4, FROM5, TO>(name)
+            .constructors
+            .first()
+            .call(*args)
+
+    protected fun <FROM, UPDATER> CompilationAssertionDsl.objectUpdateMappie(name: String = "Mapper", vararg args: Any?): ObjectUpdateMappie<FROM, UPDATER> =
+        classLoader.loadObjectUpdateMappieClass<FROM, UPDATER>(name)
             .constructors
             .first()
             .call(*args)

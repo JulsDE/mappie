@@ -35,10 +35,14 @@ data class MappieDefinitionCollection(
              sequenceOf(all.first { it.clazz.name == IDENTIFIER_IDENTITY_MAPPER })
         } else {
             all.filter { mappie ->
+                val canBeUsedAsMapper = when (mappie) {
+                    is GeneratedMappieDefinition -> true
+                    else -> mappie.clazz.functions.any { it.isMappieMapFunction() }
+                }
                 val isSubtype = source.makeNotNull().isSubtypeOf(mappie.source.erased(source))
                         && mappie.target.makeNotNull().erased(target).isSubtypeOf(target)
 
-                isSubtype && mappie.isGeneratedWithin(origin)
+                canBeUsedAsMapper && isSubtype && mappie.isGeneratedWithin(origin)
             }
         }
 
@@ -105,7 +109,7 @@ interface MappieDefinition {
     val source: IrType
     val target: IrType
 
-    fun referenceMapFunction() = clazz.functions.first { it.isMappieMapFunction() }
+    fun referenceMapFunction() = clazz.functions.first { it.isMappieMappingFunction() }
 }
 
 data class InternalMappieDefinition(
@@ -171,4 +175,3 @@ data class GeneratedMappieDefinition(
 ) : MappieDefinition {
     override fun toString() = "${clazz.name} ${source.dumpKotlinLike()} to ${target.dumpKotlinLike()}"
 }
-

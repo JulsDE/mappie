@@ -7,6 +7,7 @@ import tech.mappie.ir.GeneratedMappieDefinition
 import tech.mappie.ir.InternalMappieDefinition
 import tech.mappie.ir.MappieContext
 import tech.mappie.ir.referenceEnumMappieClass
+import tech.mappie.ir.referenceObjectUpdateMappieClass
 import tech.mappie.ir.resolving.classes.ClassResolver
 import tech.mappie.ir.resolving.enums.EnumResolver
 import tech.mappie.ir.resolving.enums.InheritedEnumResolver
@@ -23,6 +24,18 @@ object MappingResolverSelector {
                 } else {
                     InheritedEnumResolver(definition)
                 }
+            }
+            definition.clazz.isSubclassOf(referenceObjectUpdateMappieClass()) -> {
+                val declaration = definition.referenceMapFunction()
+                val parameters = declaration.parameters
+                    .filter { it.kind == IrParameterKind.Regular }
+                    .map { it.name to it.type }
+
+                ClassResolver(
+                    sources = parameters.take(1),
+                    target = declaration.returnType,
+                    fallbackSources = parameters.drop(1),
+                )
             }
             else -> {
                 val declaration = definition.referenceMapFunction()

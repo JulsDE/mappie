@@ -13,14 +13,15 @@ import tech.mappie.ir.generation.classes.ClassMappieCodeGenerator
 import tech.mappie.ir.generation.enums.EnumMappieCodeGenerator
 import tech.mappie.ir.resolving.SourcesTargetEnumMappings
 import tech.mappie.ir.resolving.SuperCallEnumMappings
-import tech.mappie.ir.util.isMappieMapFunction
+import tech.mappie.ir.util.isMappieMappingFunction
 import tech.mappie.util.IDENTIFIER_MAPPING
+import tech.mappie.util.IDENTIFIER_UPDATING
 
 class MappieTransformer(private val context: MappieContext, private val model: CodeGenerationModel)
     : IrElementTransformerVoidWithContext() {
 
     override fun visitClassNew(declaration: IrClass): IrStatement = declaration.apply {
-        declaration.declarations.filterIsInstance<IrSimpleFunction>().first { it.isMappieMapFunction() }.apply {
+        declaration.declarations.filterIsInstance<IrSimpleFunction>().first { it.isMappieMappingFunction() }.apply {
             if (model.mappings !is SuperCallEnumMappings) {
                 transform(MappieTransformer(context, model), null)
                 isFakeOverride = false
@@ -42,7 +43,7 @@ class MappieTransformer(private val context: MappieContext, private val model: C
 
         override fun visitCall(expression: IrCall, data: MappieContext): IrExpression {
             return when (expression.symbol.owner.name) {
-                IDENTIFIER_MAPPING -> {
+                IDENTIFIER_MAPPING, IDENTIFIER_UPDATING -> {
                     context(data) { generator(model).lambda(scope) }
                 }
                 else -> {
